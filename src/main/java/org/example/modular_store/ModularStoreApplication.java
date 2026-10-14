@@ -9,7 +9,9 @@ import org.springframework.scheduling.annotation.EnableAsync;
 public class ModularStoreApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(ModularStoreApplication.class, args);
+        SpringApplication.run(ModularStoreApplication.class, args)
+
+        ;
     }
 
 }
