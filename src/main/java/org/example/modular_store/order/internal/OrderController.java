@@ -37,12 +37,10 @@ public class OrderController {
                     "Customer not found with ID: " + request.customerId()
             );
         }
-
-        // 1. Order එක Database එකේ save කිරීම
+       
         Order order = new Order(request.customerId(), request.amount(), "COMPLETED");
         Order savedOrder = orderRepository.save(order);
 
-        // 2. Domain Event එක Fire කිරීම (Decoupled)
         eventPublisher.publishEvent(new OrderPlacedEvent(
                 savedOrder.getId(),
                 savedOrder.getCustomerId(),
