@@ -2,10 +2,8 @@ package org.example.modular_store.customer.internal;
 
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 @Getter
-@NoArgsConstructor
 @Entity
 @Table(name = "customers", schema = "customer_schema")
 @SuppressWarnings({"JpaDataSourceORMInspection", "unused"})
@@ -17,6 +15,9 @@ public class Customer {
 
     private String name;
     private String email;
+
+    protected Customer() {
+    }
 
     public Customer(String name, String email) {
         this.name = name;

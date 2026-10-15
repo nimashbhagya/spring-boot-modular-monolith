@@ -51,7 +51,10 @@ public class OrderController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Order>> getAllOrders() {
-        return ResponseEntity.ok(orderRepository.findAll());
+    public ResponseEntity<List<Order>> getOrders(@RequestParam(required = false) Long customerId) {
+    if (customerId != null) {
+        return ResponseEntity.ok(orderRepository.findByCustomerId(customerId));
     }
+    return ResponseEntity.ok(orderRepository.findAll());
+}
 }

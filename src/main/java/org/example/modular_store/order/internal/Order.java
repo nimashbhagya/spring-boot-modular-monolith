@@ -2,12 +2,10 @@ package org.example.modular_store.order.internal;
 
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
 @Getter
-@NoArgsConstructor
 @Entity
 @Table(name = "orders", schema = "order_schema")
 @SuppressWarnings({"JpaDataSourceORMInspection", "unused"})
@@ -22,6 +20,9 @@ public class Order {
 
     private BigDecimal totalAmount;
     private String status;
+
+    protected Order() {
+    }
 
     public Order(Long customerId, BigDecimal totalAmount, String status) {
         this.customerId = customerId;
