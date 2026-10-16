@@ -13,11 +13,11 @@ import java.util.List;
 @RequestMapping("/api/customers")
 public class CustomerController {
 
-    private final CustomerRepository customerRepository;
+    private final CustomerService customerService;
     private final CustomerMapper customerMapper;
 
-    public CustomerController(CustomerRepository customerRepository, CustomerMapper customerMapper) {
-        this.customerRepository = customerRepository;
+    public CustomerController(CustomerService customerService, CustomerMapper customerMapper) {
+        this.customerService = customerService;
         this.customerMapper = customerMapper;
     }
 
@@ -30,16 +30,31 @@ public class CustomerController {
         String email
     ) {}
 
+    // 1. Create Customer 
     @PostMapping
     public ResponseEntity<CustomerResponse> createCustomer(@Valid @RequestBody CreateCustomerRequest request) {
         Customer customer = customerMapper.toEntity(request);
-        Customer savedCustomer = customerRepository.save(customer);
-
+        Customer savedCustomer = customerService.createCustomer(customer);
         return ResponseEntity.ok(customerMapper.toResponse(savedCustomer));
     }
 
+    // 2. Get All Customers (Redis Cached)
     @GetMapping
-    public ResponseEntity<List<Customer>> getAllCustomers() {
-        return ResponseEntity.ok(customerRepository.findAll());
+    public ResponseEntity<List<CustomerResponse>> getAllCustomers() {
+        List<Customer> customers = customerService.getAllCustomers();
+        List<CustomerResponse> response = customers.stream()
+                .map(customerMapper::toResponse)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    // 3. Get Single Customer by ID (Redis Cached)
+    @GetMapping("/{id}")
+    public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id) {
+        Customer customer = customerService.getCustomerById(id);
+        if (customer == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(customerMapper.toResponse(customer));
     }
 }
