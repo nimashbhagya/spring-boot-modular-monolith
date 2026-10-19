@@ -2,12 +2,14 @@ package org.example.modular_store.order.internal;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 
 @Getter
+@Setter
 @Entity
-@Table(name = "orders", schema = "order_schema")
+@Table(name = "orders", catalog = "order_schema")
 @SuppressWarnings({"JpaDataSourceORMInspection", "unused"})
 public class Order {
 

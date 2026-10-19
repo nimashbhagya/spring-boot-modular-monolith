@@ -18,12 +18,8 @@ public class MultiSchemaFlywayConfig {
 
     @Bean
     public Flyway flyway() {
-        // Customer module schema migration
         Flyway customerFlyway = migrateModule("customer_schema", "classpath:db/migration/customer");
-
-        // Order module schema migration
         migrateModule("order_schema", "classpath:db/migration/order");
-
         return customerFlyway;
     }
 
@@ -37,7 +33,7 @@ public class MultiSchemaFlywayConfig {
                 .dataSource(dataSource)
                 .schemas(schemaName)
                 .defaultSchema(schemaName)
-                .createSchemas(true)
+                .createSchemas(true) // Automatically executes 'CREATE SCHEMA IF NOT EXISTS' in MySQL
                 .locations(location)
                 .table("flyway_schema_history")
                 .load();

@@ -1,12 +1,14 @@
 package org.example.modular_store.order.internal;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.example.modular_store.customer.CustomerApi;
 import org.springframework.web.server.ResponseStatusException;
 import org.example.modular_store.order.OrderPlacedEvent;
-import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -28,6 +30,12 @@ public class OrderController {
     }
 
     public record CreateOrderRequest(Long customerId, BigDecimal amount) {}
+
+    public record UpdateOrderRequest(
+        @NotNull(message = "Amount is required")
+        BigDecimal amount,
+        String status
+    ) {}
 
     @PostMapping
     public ResponseEntity<Order> createOrder(@RequestBody CreateOrderRequest request) {
@@ -52,9 +60,35 @@ public class OrderController {
 
     @GetMapping
     public ResponseEntity<List<Order>> getOrders(@RequestParam(required = false) Long customerId) {
-    if (customerId != null) {
-        return ResponseEntity.ok(orderRepository.findByCustomerId(customerId));
+        if (customerId != null) {
+            return ResponseEntity.ok(orderRepository.findByCustomerId(customerId));
+        }
+        return ResponseEntity.ok(orderRepository.findAll());
     }
-    return ResponseEntity.ok(orderRepository.findAll());
-}
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Order> updateOrder(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateOrderRequest request) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + id));
+
+        if (request.amount() != null) {
+            order.setTotalAmount(request.amount());
+        }
+        if (request.status() != null && !request.status().isBlank()) {
+            order.setStatus(request.status());
+        }
+
+        return ResponseEntity.ok(orderRepository.save(order));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
+        if (!orderRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        orderRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
 }
