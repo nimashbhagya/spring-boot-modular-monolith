@@ -30,6 +30,15 @@ public class CustomerController {
         String email
     ) {}
 
+    public record UpdateCustomerRequest(
+        @NotBlank(message = "Name cannot be empty")
+        String name,
+
+        @NotBlank(message = "Email cannot be empty")
+        @Email(message = "Invalid email format")
+        String email
+    ) {}
+
     // 1. Create Customer 
     @PostMapping
     public ResponseEntity<CustomerResponse> createCustomer(@Valid @RequestBody CreateCustomerRequest request) {
@@ -56,5 +65,19 @@ public class CustomerController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(customerMapper.toResponse(customer));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<CustomerResponse> updateCustomer(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateCustomerRequest request) {
+        Customer updated = customerService.updateCustomer(id, request.name(), request.email());
+        return ResponseEntity.ok(customerMapper.toResponse(updated));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
+        customerService.deleteCustomer(id);
+        return ResponseEntity.noContent().build();
     }
 }
