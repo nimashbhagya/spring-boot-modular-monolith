@@ -6,12 +6,14 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
+import org.example.modular_store.common.BaseTenantEntity;
+
 @Getter
 @Setter
 @Entity
 @Table(name = "orders", catalog = "order_schema")
 @SuppressWarnings({"JpaDataSourceORMInspection", "unused"})
-public class Order {
+public class Order extends BaseTenantEntity{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
