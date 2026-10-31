@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.example.modular_store.identity.TenantContext;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,6 +40,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (jwtService.isTokenValid(token)) {
             String username = jwtService.extractUsername(token);
             String role = jwtService.extractRole(token);
+            String tokenTenantId = jwtService.extractTenantId(token);
 
             String roleWithPrefix = (role != null && !role.startsWith("ROLE_")) ? "ROLE_" + role : role;
             var authorities = List.of(
@@ -48,6 +50,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             var authToken = new UsernamePasswordAuthenticationToken(username, null, authorities);
             
             SecurityContextHolder.getContext().setAuthentication(authToken);
+
+            // If user is not SUPER_ADMIN, lock their TenantContext to their verified tokenTenantId
+            if (!"SUPER_ADMIN".equalsIgnoreCase(role) && !"ROLE_SUPER_ADMIN".equalsIgnoreCase(role)) {
+                if (tokenTenantId != null && !tokenTenantId.isBlank()) {
+                    TenantContext.setTenantId(tokenTenantId);
+                }
+            }
         }
 
         filterChain.doFilter(request, response);

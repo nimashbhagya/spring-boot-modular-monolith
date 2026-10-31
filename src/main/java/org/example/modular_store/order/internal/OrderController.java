@@ -5,8 +5,12 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.example.modular_store.customer.CustomerApi;
+import org.example.modular_store.identity.TenantContext;
 import org.springframework.web.server.ResponseStatusException;
 import org.example.modular_store.order.OrderPlacedEvent;
 
@@ -38,6 +42,7 @@ public class OrderController {
     ) {}
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'TENANT_ADMIN', 'STAFF')")
     public ResponseEntity<Order> createOrder(@RequestBody CreateOrderRequest request) {
         if (!customerApi.existsById(request.customerId())) {
             throw new ResponseStatusException(
@@ -59,19 +64,36 @@ public class OrderController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'TENANT_ADMIN', 'STAFF')")
     public ResponseEntity<List<Order>> getOrders(@RequestParam(required = false) Long customerId) {
-        if (customerId != null) {
-            return ResponseEntity.ok(orderRepository.findByCustomerId(customerId));
+        boolean isSuperAdmin = isCurrentUserSuperAdmin();
+        String currentTenant = TenantContext.getTenantId();
+
+        List<Order> orders;
+        if (isSuperAdmin && (currentTenant == null || "system".equalsIgnoreCase(currentTenant) || "ALL".equalsIgnoreCase(currentTenant))) {
+            if (customerId != null) {
+                orders = orderRepository.findByCustomerId(customerId);
+            } else {
+                orders = orderRepository.findAll();
+            }
+        } else {
+            String effectiveTenant = (currentTenant != null && !currentTenant.isBlank()) ? currentTenant : "default_tenant";
+            if (customerId != null) {
+                orders = orderRepository.findByTenantIdAndCustomerId(effectiveTenant, customerId);
+            } else {
+                orders = orderRepository.findByTenantId(effectiveTenant);
+            }
         }
-        return ResponseEntity.ok(orderRepository.findAll());
+
+        return ResponseEntity.ok(orders);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'TENANT_ADMIN', 'STAFF')")
     public ResponseEntity<Order> updateOrder(
             @PathVariable Long id,
             @Valid @RequestBody UpdateOrderRequest request) {
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + id));
+        Order order = findOrderByIdAndTenant(id);
 
         if (request.amount() != null) {
             order.setTotalAmount(request.amount());
@@ -84,11 +106,30 @@ public class OrderController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'TENANT_ADMIN')")
     public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
-        if (!orderRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        orderRepository.deleteById(id);
+        Order order = findOrderByIdAndTenant(id);
+        orderRepository.delete(order);
         return ResponseEntity.noContent().build();
+    }
+
+    private Order findOrderByIdAndTenant(Long id) {
+        boolean isSuperAdmin = isCurrentUserSuperAdmin();
+        String currentTenant = TenantContext.getTenantId();
+
+        if (isSuperAdmin && (currentTenant == null || "system".equalsIgnoreCase(currentTenant) || "ALL".equalsIgnoreCase(currentTenant))) {
+            return orderRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found with ID: " + id));
+        }
+
+        String effectiveTenant = (currentTenant != null && !currentTenant.isBlank()) ? currentTenant : "default_tenant";
+        return orderRepository.findByIdAndTenantId(id, effectiveTenant)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found with ID: " + id));
+    }
+
+    private boolean isCurrentUserSuperAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN") || a.getAuthority().equals("SUPER_ADMIN"));
     }
 }
